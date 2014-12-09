@@ -37,6 +37,7 @@ public class DecisionTree {
 		ArrayList<String> values = DB.getAttList(target);
 		double targetE = calEntropy(values);
 		
+		//select the feature for splitting the data
 		splitPoint = featureSelection(targetE);
 		int attId = splitPoint.getFeatureId();
 		splitNode.setSplitPoint(splitPoint);
@@ -65,6 +66,7 @@ public class DecisionTree {
 		System.out.println("Feature Name: "+splitPoint.getName());
 		System.out.println("childrenDB size: "+childrenDB.size());
 		if(newFeatures.size()>0){
+			//recursively growing the tree
 			for(int i=0;i<childrenDB.size();i++){
 				if(!childrenDB.get(i).isValueSame(target)){
 					Node newSplitNode = new Node(hDB.get(i));
@@ -72,6 +74,7 @@ public class DecisionTree {
 					DecisionTree ID3 = new DecisionTree(newSplitNode, childrenDB.get(i), target, newFeatures);
 					ID3.run();
 				}else{
+					// stop condition 1: the value of the child node is the same
 					Node newSplitNode = new Node(hDB.get(i));
 					newSplitNode.setLeafNode(true);
 					newSplitNode.setPrediction(childrenDB.get(i).getSummary(target));
@@ -80,6 +83,7 @@ public class DecisionTree {
 				}
 			}
 		}else{
+			//stop condition 2: run out of splitting features
 			for(int i=0;i<childrenDB.size();i++){
 				Node newSplitNode = new Node(hDB.get(i));
 				newSplitNode.setLeafNode(true);
@@ -116,6 +120,7 @@ public class DecisionTree {
 		return Math.log(d)/Math.log(2.0);
 	}
 
+	//TODO the function for feature selection
 	private Feature featureSelection(double targetE) {
 		HashMap<Integer, Double> Entropy = new HashMap<Integer, Double>();
 		for(Feature f:features){

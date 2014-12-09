@@ -30,6 +30,8 @@ public class DecisionTreeDriver {
 	public static int DiscretizedRange = 4;
 	
 	public static void main(String[] args) {
+		
+		//read input parameters
 		if(!cmdParser(args)){
 			System.out.println("Error");
 			System.exit(0);
@@ -38,11 +40,15 @@ public class DecisionTreeDriver {
 		Feature targetFeature = null;
 		int[][] results = null;
 		
+		//read all the features and the customers from the input data and store in memory
 		ArrayList<Feature> features = readInputFile(bankDB, trainingData);
 		//bankDB.printDB();
 		
+		//TODO set the properties of each feature e.g., discretize the continuous variables 
+		//or calculate the number of class of each categorical variables
 		setFeatureProperties(bankDB, features);
 
+		//set the target of the decision tree
 		int targetId=0;
 		for(Feature f:features){
 			if(f.isTarget()){
@@ -52,11 +58,15 @@ public class DecisionTreeDriver {
 			}
 		}
 		
+		//TODO run the decision tree model training
 		DecisionTree ID3 = new DecisionTree(bankDB, targetId, features);
 		ID3.run();
 		
+		//testing the trained decision tree
 		results = testing(ID3.getSplitNode(), targetFeature);
 		
+		//TODO need to be edited
+		System.out.println("Result table");
 		for(int i=0;i<targetFeature.getNumValues();i++){
 			for(int j=0;j<targetFeature.getNumValues();j++){
 				System.out.print(results[j][i]+" ");
@@ -100,8 +110,8 @@ public class DecisionTreeDriver {
 			}else{
 				actualResult = hResultValue.indexOf(customer.getAtt(targetFeature.getFeatureId()));
 			}
-			System.out.println("model: "+modelResult+" actural: "+actualResult);
-			System.out.println("model: "+nextNode.getPrediction()+" actural: "+customer.getAtt(targetFeature.getFeatureId()));
+			//System.out.println("model: "+modelResult+" actural: "+actualResult);
+			//System.out.println("model: "+nextNode.getPrediction()+" actural: "+customer.getAtt(targetFeature.getFeatureId()));
 			results[modelResult][actualResult]++;
 		}
 		
@@ -117,12 +127,16 @@ public class DecisionTreeDriver {
 			br = new BufferedReader(new FileReader(inFile));
 			String newLine;
 			
+			//TODO needed to be edited
+			//identify features and the feature data type whether is string or integer
 			features = readFeatures(newLine = br.readLine());
 			
+			//add all customers into database
 			while((newLine = br.readLine()) != null){
 				String[] customerInfo = newLine.split(",");
 				ArrayList<String> attributes =  new ArrayList<String>();
 				
+				//TODO need to be edited
 				if(customerInfo.length != 19){
 					customerInfo[2].concat(" "+customerInfo[3]);
 					for(int i=3;i<customerInfo.length-1;i++){
@@ -141,10 +155,8 @@ public class DecisionTreeDriver {
 			
 			br.close();
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -164,6 +176,7 @@ public class DecisionTreeDriver {
 					feature.setDiscriminated(true);
 				}
 				
+				//discretize continuous variables
 				if(feature.getType() == 0){
 					ArrayList<String> values = bankDB.getAttList(feature.getFeatureId());
 					ArrayList<Integer> valueList = new ArrayList<Integer>();
@@ -195,10 +208,10 @@ public class DecisionTreeDriver {
 						bankDB.discretizeValues(maxValue, minValue, feature.getRange(), feature.getFeatureId());
 					}
 					
-				}else{
+				}else{//calculate the number of the class of a category variable 
 					ArrayList<String> values = new ArrayList<String>();
 					ArrayList<String> valueList = new ArrayList<String>();
-					
+					//get the column of the feature from the database
 					values = bankDB.getAttList(feature.getFeatureId());
 					
 					for(String value:values){
@@ -274,7 +287,6 @@ public class DecisionTreeDriver {
 				pass = false;
 			}
 		} catch (org.apache.commons.cli.ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
