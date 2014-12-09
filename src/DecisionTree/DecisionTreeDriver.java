@@ -1,5 +1,5 @@
 /*
- * Execution: 
+ * Execution: -i Dataset/test1.txt -t  Dataset/test1.txt  -o output -f marital_status 
  */
 package DecisionTree;
 
