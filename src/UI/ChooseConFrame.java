@@ -140,6 +140,7 @@ public class ChooseConFrame extends JFrame {
 					isAttributeContinous.put((String)leftListModel.get(i), false);
 				}
 				/* call ID3 or C4.5 */
+				//TODO called the decision tree driver
 				final String result = ID3.run();
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {

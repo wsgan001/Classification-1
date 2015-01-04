@@ -16,17 +16,17 @@ public class DecisionTree {
 	private Node splitNode;
 	private ArrayList<CustomerDB> childrenDB = new ArrayList<CustomerDB>();
 	private ArrayList<Feature> features;
-	private int target;
+	private String target;
 	private Feature splitPoint;
 
-	public DecisionTree(CustomerDB bankDB, int target, ArrayList<Feature> features) {
+	public DecisionTree(CustomerDB bankDB, String target, ArrayList<Feature> features) {
 		this.DB = bankDB;
 		this.target = target;
 		this.features = features;
 		this.splitNode = new Node();
 	}
 
-	public DecisionTree(Node newSplitNode, CustomerDB bankDB, int target, ArrayList<Feature> features) {
+	public DecisionTree(Node newSplitNode, CustomerDB bankDB, String target, ArrayList<Feature> features) {
 		this.DB = bankDB;
 		this.target = target;
 		this.features = features;
@@ -128,7 +128,7 @@ public class DecisionTree {
 				continue;
 			}
 			
-			ArrayList<String> attValues = DB.getAttList(f.getFeatureId());
+			ArrayList<String> attValues = DB.getAttList(f.getName());
 			ArrayList<String> targetValues = DB.getAttList(target);
 			HashMap<String,ArrayList<String>> valueLists = new HashMap<String, ArrayList<String>>();
 			

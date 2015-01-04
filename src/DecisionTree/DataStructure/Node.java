@@ -37,8 +37,8 @@ public class Node {
 		return leaf;
 	}
 
-	public int getSplitPointId() {
-		return splitPoint.getFeatureId();
+	public String getSplitPointName() {
+		return splitPoint.getName();
 	}
 
 	public ArrayList<Node> getChildren() {

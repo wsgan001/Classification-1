@@ -7,6 +7,7 @@ import java.util.Map;
 
 public class CustomerDB {
 	private ArrayList<Customer> DB = new ArrayList<Customer>();
+	private ArrayList<String> Header = new ArrayList<String>();
 	
 	public CustomerDB(){
 		
@@ -32,20 +33,19 @@ public class CustomerDB {
 		}
 	}
 
-
-
 	public void discretizeValues(int maxValue, int minValue, int range,
-			int id) {
+			String featureName) {
+		int attrId = Header.indexOf(featureName);
 		for(Customer customer:DB){		
-			customer.setDiscretizeValue(id, minValue, range);
+			customer.setDiscretizeValue(attrId, minValue, range);
 		}
 	}
 
-	public boolean isValueSame(int id) {
-	
-		String value = DB.get(0).getAtt(id);
+	public boolean isValueSame(String featureName) {
+		int attrId = Header.indexOf(featureName);
+		String value = DB.get(0).getAtt(attrId);
 		for(int i=0;i<DB.size();i++){
-			if(!value.equals( DB.get(i).getAtt(id))){
+			if(!value.equals( DB.get(i).getAtt(attrId))){
 				return false;	
 			}
 		}
@@ -53,22 +53,24 @@ public class CustomerDB {
 		return true;
 	}
 
-	public ArrayList<String> getAttList(int featureId) {
+	public ArrayList<String> getAttList(String featureName) {
 		ArrayList<String> list = new ArrayList<String>();
+		int attrId = Header.indexOf(featureName);
 		
 		for(Customer customer:DB){
-			list.add(customer.getAtt(featureId));
+			list.add(customer.getAtt(attrId));
 		}
 		
 		return list;
 	}
 
-	public String getSummary(int target) {
+	public String getSummary(String targetFeature) {
 		HashMap<String, Integer> valueCount =  new HashMap<String, Integer>();
-		ArrayList<String> values = getAttList(target);
+		int target = Header.indexOf(targetFeature);
+		ArrayList<String> values = getAttList(targetFeature);
 		String targetSummary="";
 		
-		if(isValueSame(target)){
+		if(isValueSame(targetFeature)){
 			targetSummary = DB.get(0).getAtt(target);
 			if(targetSummary.equals("")){
 				System.out.println(" value the smae targetSummary = null");
@@ -106,6 +108,14 @@ public class CustomerDB {
 
 	public ArrayList<Customer> getDB() {
 		return DB;
+	}
+
+	public void setHeader(ArrayList<String> header) {
+		Header = header;
+	}
+
+	public int getColNumOfFeature(String featureName) {
+		return Header.indexOf(featureName);
 	}
 
 

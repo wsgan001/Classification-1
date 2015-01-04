@@ -5,7 +5,7 @@ public class Feature {
 	private boolean discriminated;
 	private boolean target;
 	private int featureId;
-	private int type; // 0- integer; 1- string
+	private boolean isContinuous;
 	private int numValues;
 	private int maxValue;
 	private int minValue;
@@ -25,16 +25,16 @@ public class Feature {
 		this.name = featureName;		
 	}
 
-	public void setFeatureType(int type) {
-		this.type = type;		
+	public void setFeatureType(boolean isContinuous) {
+		this.isContinuous = isContinuous;		
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public int getType() {
-		return type;
+	public boolean getIsContinuous() {
+		return isContinuous;
 	}
 
 	public void setValueNum(int size) {
@@ -55,7 +55,7 @@ public class Feature {
 	}
 	
 	public String toString(){
-		return 	"Name("+name+") ID("+featureId+") Type("+type+") numValues("+numValues+") max("+maxValue+") min("+minValue+")"
+		return 	"Name("+name+") ID("+featureId+") Type("+isContinuous+") numValues("+numValues+") max("+maxValue+") min("+minValue+")"
 			  + " discriminated("+discriminated+") ";
 	}
 

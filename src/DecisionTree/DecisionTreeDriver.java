@@ -8,12 +8,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
-
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Options;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
 
 import DecisionTree.DataStructure.Customer;
 import DecisionTree.DataStructure.CustomerDB;
@@ -24,28 +21,34 @@ public class DecisionTreeDriver {
 
 	public static String trainingData;
 	public static String testingData;
+	public Map<String, Boolean> isContinuous;
 	public static String OutFilePath;
 	public static String target;
-	public static int DiscretizedRange = 4;
+	ArrayList<Feature> features = new ArrayList<Feature>();
+	public static int DiscretizedRange = 2;
 	
-	public static void main(String[] args) {
+	public void Driver(String trainingFile, String testFile, String targetAttr, Map <String, Boolean> isContinous) {
 		
 		//read input parameters
-		if(!cmdParser(args)){
+		if(!cmdParser(trainingFile, testFile, targetAttr, isContinous)){
 			System.out.println("Error");
 			System.exit(0);
 		}
-		CustomerDB bankDB = new CustomerDB();
+		CustomerDB dataDB = new CustomerDB();
 		Feature targetFeature = null;
+		
 		int[][] results = null;
 		
-		//read all the features and the customers from the input data and store in memory
-		ArrayList<Feature> features = readInputFile(bankDB, trainingData);
-		//bankDB.printDB();
+		//identify features and the feature data type whether is string or integer
+		features = readFeatures(isContinous, targetAttr);
 		
-		//TODO set the properties of each feature e.g., discretize the continuous variables 
+		//read all the features and the customers from the input data and store in memory
+		dataDB = readInputFile(trainingData);
+		//dataDB.printDB();
+		
+		//set the properties of each feature e.g., discretize the continuous variables 
 		//or calculate the number of class of each categorical variables
-		setFeatureProperties(bankDB, features);
+		setFeatureProperties(dataDB, features);
 
 		//set the target of the decision tree
 		int targetId=0;
@@ -57,12 +60,13 @@ public class DecisionTreeDriver {
 			}
 		}
 		
-		//TODO run the decision tree model training
-		DecisionTree ID3 = new DecisionTree(bankDB, targetId, features);
+		//run the decision tree model training
+		DecisionTree ID3 = new DecisionTree(dataDB, targetAttr, features);
 		ID3.run();
 		
 		//testing the trained decision tree
-		results = testing(ID3.getSplitNode(), targetFeature);
+		Node root = ID3.getSplitNode();
+		results = testing(root, targetFeature);
 		
 		//TODO need to be edited
 		System.out.println("Result table");
@@ -74,19 +78,22 @@ public class DecisionTreeDriver {
 		}
 	}
 
-	private static int[][] testing(Node splitNode, Feature targetFeature) {
+	private int[][] testing(Node splitNode, Feature targetFeature) {
 		CustomerDB testDB = new CustomerDB();
-		ArrayList<Feature> features = readInputFile(testDB, testingData);
+		testDB = readInputFile(testingData);
 		setFeatureProperties(testDB, features);
 		ArrayList<String> hResultValue = new ArrayList<String>();
 		int[][] results = new int[targetFeature.getNumValues()][targetFeature.getNumValues()];
 		int modelResult;
 		int actualResult;
-		System.out.println(targetFeature.getNumValues());
+		int targetId = testDB.getColNumOfFeature(targetFeature.getName());
+
 		for(Customer customer:testDB.getDB()){
 			Node nextNode = splitNode;
+			
+			//traversing the training model
 			while(!nextNode.isLeafNode()){
-				String value = customer.getAtt(nextNode.getSplitPointId());
+				String value = customer.getAtt(testDB.getColNumOfFeature(nextNode.getSplitPointName()));
 
 				for(Node child:nextNode.getChildren()){
 					if(value.equals(child.getSplitValue())){
@@ -103,11 +110,11 @@ public class DecisionTreeDriver {
 				modelResult = hResultValue.indexOf(nextNode.getPrediction());
 			}
 			
-			if(!hResultValue.contains(customer.getAtt(targetFeature.getFeatureId()))){
-				hResultValue.add(customer.getAtt(targetFeature.getFeatureId()));
-				actualResult = hResultValue.indexOf(customer.getAtt(targetFeature.getFeatureId()));
+			if(!hResultValue.contains(customer.getAtt(targetId))){
+				hResultValue.add(customer.getAtt(targetId));
+				actualResult = hResultValue.indexOf(customer.getAtt(targetId));
 			}else{
-				actualResult = hResultValue.indexOf(customer.getAtt(targetFeature.getFeatureId()));
+				actualResult = hResultValue.indexOf(customer.getAtt(targetId));
 			}
 			//System.out.println("model: "+modelResult+" actural: "+actualResult);
 			//System.out.println("model: "+nextNode.getPrediction()+" actural: "+customer.getAtt(targetFeature.getFeatureId()));
@@ -118,29 +125,26 @@ public class DecisionTreeDriver {
 		
 	}
 
-	private static ArrayList<Feature> readInputFile(CustomerDB bankDB, String inFile) {
+	private static CustomerDB readInputFile(String inFile) {
+		CustomerDB dataDB = new CustomerDB();
 		BufferedReader br = null;
-		ArrayList<Feature> features = new ArrayList<Feature>();
 		
 		try {
 			br = new BufferedReader(new FileReader(inFile));
 			String newLine;
 			
-			//TODO needed to be edited
-			//identify features and the feature data type whether is string or integer
-			features = readFeatures(newLine = br.readLine());
+			//the header line
+			newLine = br.readLine();
+			ArrayList<String> header =  new ArrayList<String>(Arrays.asList(newLine.split(",")));
+			dataDB.setHeader(header);
 			
 			//add all customers into database
 			while((newLine = br.readLine()) != null){
 				String[] customerInfo = newLine.split(",");
 				ArrayList<String> attributes =  new ArrayList<String>();
 				
-				//TODO need to be edited
-				if(customerInfo.length != 19){
-					customerInfo[2].concat(" "+customerInfo[3]);
-					for(int i=3;i<customerInfo.length-1;i++){
-						customerInfo[i] = customerInfo[i+1];
-					}
+				if(customerInfo.length != header.size()){
+					continue;
 				}
 				
 				for(String value:customerInfo){
@@ -149,7 +153,7 @@ public class DecisionTreeDriver {
 				
 				Customer newCustomer = new Customer(attributes);
 
-				bankDB.addCustomer(newCustomer);
+				dataDB.addCustomer(newCustomer);
 			}
 			
 			br.close();
@@ -159,136 +163,107 @@ public class DecisionTreeDriver {
 			e.printStackTrace();
 		}
 		
-		return features;
+		return dataDB;
 	}
 
 	private static void setFeatureProperties(CustomerDB bankDB,
 			ArrayList<Feature> features) {
 		for(Feature feature:features){
 			
-			if(    feature.getFeatureId() == 0 || feature.getFeatureId() == 1 || feature.getFeatureId() == 2
-				|| feature.getFeatureId() == 3 || feature.getFeatureId() == 4 || feature.getFeatureId() == 7
-				|| feature.getFeatureId() == 9 || feature.getFeatureId() == 10){
-				feature.setDiscriminated(false);
-			}else{
-				if(!feature.isTarget()){
-					feature.setDiscriminated(true);
-				}
-				
-				//discretize continuous variables
-				if(feature.getType() == 0){
-					ArrayList<String> values = bankDB.getAttList(feature.getFeatureId());
-					ArrayList<Integer> valueList = new ArrayList<Integer>();
-					
-					int maxValue = 0;
-					int minValue = Integer.parseInt(values.get(0));
-					int v;
-					for(String value:values){
-						v = Integer.parseInt(value);
-						if(v > maxValue){
-							maxValue = v;
-						}else if(v < minValue){
-							minValue = v;
-						}
-						
-						if(!valueList.contains(v)){
-							valueList.add(v);
-						}
+			if(!feature.isTarget()){
+				feature.setDiscriminated(true);
+			}
+
+			//discretize continuous variables
+			if(feature.getIsContinuous()){
+				ArrayList<String> values = bankDB.getAttList(feature.getName());
+				ArrayList<Integer> valueList = new ArrayList<Integer>();
+
+				int maxValue = 0;
+				int minValue = Integer.parseInt(values.get(0));
+				int v;
+				for(String value:values){
+					v = Integer.parseInt(value);
+					if(v > maxValue){
+						maxValue = v;
+					}else if(v < minValue){
+						minValue = v;
 					}
 
-					if(valueList.size() <= 10){
-						feature.setValueNum(valueList.size());
-					}else{
-						feature.setRange((maxValue-minValue)/DiscretizedRange);
-						feature.setMaxValue(maxValue);
-						feature.setMinValue(minValue);
-						feature.setValueNum(DiscretizedRange);
-						
-						bankDB.discretizeValues(maxValue, minValue, feature.getRange(), feature.getFeatureId());
+					if(!valueList.contains(v)){
+						valueList.add(v);
 					}
-					
-				}else{//calculate the number of the class of a category variable 
-					ArrayList<String> values = new ArrayList<String>();
-					ArrayList<String> valueList = new ArrayList<String>();
-					//get the column of the feature from the database
-					values = bankDB.getAttList(feature.getFeatureId());
-					
-					for(String value:values){
-						if(!valueList.contains(value)){
-							valueList.add(value);
-						}
-					}
-					
-					feature.setValueNum(valueList.size());
 				}
+
+				if(valueList.size() <= 10){
+					feature.setValueNum(valueList.size());
+				}else{
+					feature.setRange((maxValue-minValue)/DiscretizedRange);
+					feature.setMaxValue(maxValue);
+					feature.setMinValue(minValue);
+					feature.setValueNum(DiscretizedRange);
+
+					bankDB.discretizeValues(maxValue, minValue, feature.getRange(), feature.getName());
+				}
+
+			}else{//calculate the number of the class of a category variable 
+				ArrayList<String> values = new ArrayList<String>();
+				ArrayList<String> valueList = new ArrayList<String>();
+				//get the column of the feature from the database
+				values = bankDB.getAttList(feature.getName());
+
+				for(String value:values){
+					if(!valueList.contains(value)){
+						valueList.add(value);
+					}
+				}
+
+				feature.setValueNum(valueList.size());
 			}
-			
 		}
 		
 	}
 
-	private static ArrayList<Feature> readFeatures(String strFeatures) {
+	private static ArrayList<Feature> readFeatures(Map<String, Boolean> isContinuous, String targetAttr) {
 		ArrayList<Feature> features = new ArrayList<Feature>();
-		StringTokenizer tokens = new StringTokenizer(strFeatures,",\" ");
-		String feature;
 		int id = 0;
-		//feature.equals("city") ||  feature.equals("state_province") ||
-		while(tokens.hasMoreElements()){
-			feature = tokens.nextToken();
+		
+		//for feature set
+		for(Map.Entry<String, Boolean> entry:isContinuous.entrySet()){
 			Feature newFeature = new Feature(id);
-			newFeature.setFeatureName(feature);
+			newFeature.setFeatureName(entry.getKey());
 			newFeature.setTarget(false);
+			newFeature.setFeatureType(entry.getValue());
+			features.add(newFeature);
 			id++;
-			if(    feature.equals("customer_region_id") || feature.equals("total_children") 
-				|| feature.equals("num_children_at_home") || feature.equals("age") || feature.equals("year_income")){
-				newFeature.setFeatureType(0);
-			}else{
-				newFeature.setFeatureType(1);
-			}
-			
-			if(feature.equals(target)){
-				newFeature.setTarget(true);
-			}
-			features.add(newFeature);	
 		}
+		
+		//for the target feature
+		Feature newFeature = new Feature(id);
+		newFeature.setFeatureName(targetAttr);
+		newFeature.setTarget(true);
+		newFeature.setFeatureType(false);
+		features.add(newFeature);
 		
 		return features;
 	}
 
-	private static boolean cmdParser(String[] args) {
+	private static boolean cmdParser(String trainingFile, String testFile, String targetAttr, Map <String, Boolean> isContinous) {
 		boolean pass = false;
-		Options options = new Options();
-		
-		//add parameter
-		options.addOption("i", true, "[input] training data");
-		options.addOption("t", true, "[input] testing data");
-		options.addOption("o", true, "[output] output directory");
-		options.addOption("f", true, "[target] the prediction target");
 
-		
-		//parse parameters and initialize the program settings
-		CommandLineParser parser = new BasicParser();
-		try {
-			CommandLine cmd = parser.parse( options, args);
-			if(cmd.hasOption("i") && cmd.hasOption("o")){
-				trainingData = cmd.getOptionValue("i");
-				testingData = cmd.getOptionValue("t");
-				OutFilePath = cmd.getOptionValue("o");
-				target = cmd.getOptionValue("f");
-				
-				System.out.println("Parameter Setting: -i "+trainingData
-													+" -t "+testingData
-													+" -o "+OutFilePath
-													+" -f "+target);
-				
-				pass = true;
-			}else{
-				pass = false;
-			}
-		} catch (org.apache.commons.cli.ParseException e) {
-			e.printStackTrace();
-		}
-		
+		if(trainingFile.length() != 0 && testFile.length() != 0 && targetAttr.length() != 0 && !isContinous.isEmpty()){
+			trainingData = trainingFile;
+			testingData = testFile;
+			OutFilePath = "output.txt";//TODO for output interface
+			target = targetAttr;
+
+			System.out.println("Parameter Setting: -i "+trainingData
+					+" -t "+testingData
+					+" -o "+OutFilePath
+					+" -f "+target);
+
+			pass = true;
+		}	
 		
 		return pass;
 	}
