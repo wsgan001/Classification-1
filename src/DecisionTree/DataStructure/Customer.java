@@ -13,25 +13,9 @@ public class Customer {
 	public String toString(){
 		StringBuilder sb = new StringBuilder();
 		
-		sb.append("Customer ID("+attributes.get(0)+
-				  "), Account Number("+attributes.get(1)+
-				  "), Last Name("+attributes.get(2)+
-				  "), First Name("+attributes.get(3)+
-				  "), Address("+attributes.get(4)+
-				  "), City("+attributes.get(5)+
-				  "), State("+attributes.get(6)+
-				  "), Post Code("+attributes.get(7)+
-				  "), Country("+ attributes.get(8)+
-				  "), Customer Region ID("+attributes.get(9)+
-				  "), Phone("+attributes.get(10)+
-				  "), Marital Status("+attributes.get(11)+
-				  "), Gender("+attributes.get(12)+
-				  "), Total Number of Children("+attributes.get(13)+
-				  "), Number of Children at Home("+attributes.get(14)+
-				  "), Education("+attributes.get(15)+
-				  "), Member Card("+attributes.get(16)+
-				  "), Age("+attributes.get(17)+
-				  "), Year Income("+ attributes.get(18)+")");
+		for(String attr:attributes){
+			sb.append(attr+" ");
+		}
 		
 		return sb.toString();		
 	}
@@ -39,12 +23,16 @@ public class Customer {
 	public String getAtt(int featureId) {
 		return attributes.get(featureId);
 	}
+	
+	public ArrayList<String> getAllAtt() {
+		return attributes;
+	}
 
-	public void setDiscretizeValue(int id, int minValue, int range) {
+	public void setDiscretizeValue(int id, double minValue, double range) {
 		String strValue = attributes.get(id);
-		int value = Integer.parseInt(strValue);
+		double value = Double.parseDouble(strValue);
 		
-		value = (value - minValue)/range;
+		value = (int) ((int) (value - minValue)/range);
 		
 		attributes.set(id, value+"");
 		

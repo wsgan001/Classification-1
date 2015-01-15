@@ -39,8 +39,10 @@ public class DecisionTree {
 		
 		//select the feature for splitting the data
 		splitPoint = featureSelection(targetE);
-		int attId = splitPoint.getFeatureId();
+		String featureName = splitPoint.getName();
+		int attId = DB.getColNumOfFeature(featureName);
 		splitNode.setSplitPoint(splitPoint);
+		splitNode.setPrediction(DB.getSummary(target));
 		
 		ArrayList<String> hDB = new ArrayList<String>();
 		for(int i=0;i<DB.size();i++){
@@ -51,6 +53,7 @@ public class DecisionTree {
 				childDB.addCustomer(customer);
 			}else{
 				CustomerDB childDB =new CustomerDB();
+				childDB.setHeader(DB.getHeader());
 				childDB.addCustomer(customer);
 				hDB.add(customer.getAtt(attId));
 				childrenDB.add(childDB);
@@ -59,7 +62,7 @@ public class DecisionTree {
 		
 		ArrayList<Feature> newFeatures = new ArrayList<Feature>();
 		for(Feature f:features){
-			if(attId != f.getFeatureId() && f.isDiscriminated() && !f.isTarget()){
+			if(featureName != f.getName() && f.isDiscriminated() && !f.isTarget()){
 				newFeatures.add(f);
 			}
 		}
@@ -122,7 +125,7 @@ public class DecisionTree {
 
 	//TODO the function for feature selection
 	private Feature featureSelection(double targetE) {
-		HashMap<Integer, Double> Entropy = new HashMap<Integer, Double>();
+		HashMap<String, Double> Entropy = new HashMap<String, Double>();
 		for(Feature f:features){
 			if(!f.isDiscriminated() || f.isTarget()){
 				continue;
@@ -149,7 +152,7 @@ public class DecisionTree {
 			    valueEntropy += (double)entry.getValue().size()*calEntropy(entry.getValue())/(double)attValues.size();
 			}
 			
-			Entropy.put(f.getFeatureId(), valueEntropy);
+			Entropy.put(f.getName(), valueEntropy);
 		}
 
 		double max = 0.0;
@@ -158,8 +161,8 @@ public class DecisionTree {
 			if(!features.get(i).isDiscriminated() || features.get(i).isTarget()){
 				continue;
 			} 
-			if((targetE-Entropy.get(features.get(i).getFeatureId()))>max){
-				max = (targetE-Entropy.get(features.get(i).getFeatureId()));
+			if((targetE-Entropy.get(features.get(i).getName()))>max){
+				max = (targetE-Entropy.get(features.get(i).getName()));
 				selectFeature = i;
 			}
 		}

@@ -9,13 +9,15 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
 
+import Assessment.ConfusionMatrix;
 import DecisionTree.DataStructure.Customer;
 import DecisionTree.DataStructure.CustomerDB;
 import DecisionTree.DataStructure.Feature;
 import DecisionTree.DataStructure.Node;
+
+import com.opencsv.CSVReader;
 
 public class DecisionTreeDriver {
 
@@ -24,10 +26,10 @@ public class DecisionTreeDriver {
 	public Map<String, Boolean> isContinuous;
 	public static String OutFilePath;
 	public static String target;
-	ArrayList<Feature> features = new ArrayList<Feature>();
+	static ArrayList<Feature> features = new ArrayList<Feature>();
 	public static int DiscretizedRange = 2;
 	
-	public void Driver(String trainingFile, String testFile, String targetAttr, Map <String, Boolean> isContinous) {
+	public static String run(String trainingFile, String testFile, String targetAttr, Map <String, Boolean> isContinous) {
 		
 		//read input parameters
 		if(!cmdParser(trainingFile, testFile, targetAttr, isContinous)){
@@ -36,8 +38,6 @@ public class DecisionTreeDriver {
 		}
 		CustomerDB dataDB = new CustomerDB();
 		Feature targetFeature = null;
-		
-		int[][] results = null;
 		
 		//identify features and the feature data type whether is string or integer
 		features = readFeatures(isContinous, targetAttr);
@@ -51,10 +51,8 @@ public class DecisionTreeDriver {
 		setFeatureProperties(dataDB, features);
 
 		//set the target of the decision tree
-		int targetId=0;
 		for(Feature f:features){
 			if(f.isTarget()){
-				targetId = f.getFeatureId();
 				targetFeature = f;
 				break;
 			}
@@ -66,34 +64,101 @@ public class DecisionTreeDriver {
 		
 		//testing the trained decision tree
 		Node root = ID3.getSplitNode();
-		results = testing(root, targetFeature);
+		CustomerDB resultDB = new CustomerDB();
+		resultDB = testing(root, targetFeature);
+		resultDB.printDB();
 		
-		//TODO need to be edited
-		System.out.println("Result table");
-		for(int i=0;i<targetFeature.getNumValues();i++){
-			for(int j=0;j<targetFeature.getNumValues();j++){
-				System.out.print(results[j][i]+" ");
-			}
-			System.out.println();
+		ArrayList<ConfusionMatrix> report = modelAssessment(resultDB);
+		
+		double precision = 0;
+		double recall = 0;
+		double accuracy = 0;
+		double fpr = 0;
+		double fScore = 0;
+		for(ConfusionMatrix cm:report){
+			precision += cm.getPrecision();
+			recall += cm.getRecall();
+			accuracy += cm.getAccuracy();
+			fpr += cm.getFPR();
+			fScore += cm.getFScore();
 		}
+		precision /= report.size();
+		recall /= report.size();
+		accuracy /= report.size();
+		fpr /= report.size();
+		fScore /= report.size();
+		
+		return "Precision = "+precision+"\n"
+			  +"Recall(True Positve Rate) = "+recall+"\n"
+			  +"Accuracy = "+accuracy+"\n"
+			  +"False Positive Rate = "+fpr+"\n"
+			  +"F1 Score = "+fScore+"\n";
 	}
 
-	private int[][] testing(Node splitNode, Feature targetFeature) {
+	private static ArrayList<ConfusionMatrix> modelAssessment(CustomerDB resultDB) {
+		ArrayList<String> header = resultDB.getHeader();
+		ArrayList<ConfusionMatrix> report = new ArrayList<ConfusionMatrix>();
+		
+		int size = 0;
+		for(int i = 1; i<header.size();i++){
+			ArrayList<String> recall = resultDB.getAttList(header.get(i));
+			for(int j = 1; j<header.size();j++){
+					size += Integer.parseInt(recall.get(j-1));
+			}
+		}
+		
+		for(int i = 1; i<header.size();i++){
+			ConfusionMatrix cm = new ConfusionMatrix();
+			ArrayList<String> recall = resultDB.getAttList(header.get(i));
+			int tp = Integer.parseInt(recall.get(i-1));
+			cm.setTP(tp);
+			
+			int fp = 0;
+			for(int j = 1; j<header.size();j++){
+				if(j != i){
+					fp += Integer.parseInt(recall.get(j-1));
+				}
+			}
+			cm.setFP(fp);
+			
+			ArrayList<String> row = resultDB.getCustomer(i-1).getAllAtt();
+			int fn = 0;
+			for(int j = 1; j<header.size();j++){
+				if(j != i){
+					fn += Integer.parseInt(row.get(j));
+				}
+			}
+			cm.setFN(fn);
+			
+			int tn = size - tp - fn - fp;
+			cm.setTN(tn);
+			
+			report.add(cm);
+		}
+		
+		return report;
+	}
+
+	private static CustomerDB testing(Node splitNode, Feature targetFeature) {
 		CustomerDB testDB = new CustomerDB();
 		testDB = readInputFile(testingData);
 		setFeatureProperties(testDB, features);
 		ArrayList<String> hResultValue = new ArrayList<String>();
-		int[][] results = new int[targetFeature.getNumValues()][targetFeature.getNumValues()];
+		int[][] results = new int[targetFeature.getNumValues()+1][targetFeature.getNumValues()+1];
 		int modelResult;
 		int actualResult;
 		int targetId = testDB.getColNumOfFeature(targetFeature.getName());
 
+		hResultValue.add("Model Result");
+		
 		for(Customer customer:testDB.getDB()){
 			Node nextNode = splitNode;
+			Node preNode = null;
 			
 			//traversing the training model
-			while(!nextNode.isLeafNode()){
+			while(!nextNode.isLeafNode() && preNode != nextNode){
 				String value = customer.getAtt(testDB.getColNumOfFeature(nextNode.getSplitPointName()));
+				preNode = nextNode;
 
 				for(Node child:nextNode.getChildren()){
 					if(value.equals(child.getSplitValue())){
@@ -121,7 +186,23 @@ public class DecisionTreeDriver {
 			results[modelResult][actualResult]++;
 		}
 		
-		return results;
+		//store the result into DB
+		CustomerDB resultDB = new CustomerDB();
+		
+		resultDB.setHeader(hResultValue);
+		
+		for(int i=1;i<hResultValue.size();i++){
+			ArrayList<String> attributes = new ArrayList<String>();
+			attributes.add(hResultValue.get(i));
+			
+			for(int j=1;j<hResultValue.size();j++){
+				attributes.add(results[i][j]+"");
+			}
+			
+			resultDB.addCustomer(new Customer(attributes));
+		}
+		
+		return resultDB;
 		
 	}
 
@@ -130,20 +211,20 @@ public class DecisionTreeDriver {
 		BufferedReader br = null;
 		
 		try {
-			br = new BufferedReader(new FileReader(inFile));
-			String newLine;
-			
-			//the header line
-			newLine = br.readLine();
-			ArrayList<String> header =  new ArrayList<String>(Arrays.asList(newLine.split(",")));
+			CSVReader reader = new CSVReader(new FileReader(inFile));
+		    String [] nextLine;
+		    
+		    //the header line
+		    nextLine = reader.readNext();
+			ArrayList<String> header =  new ArrayList<String>(Arrays.asList(nextLine));
 			dataDB.setHeader(header);
 			
-			//add all customers into database
-			while((newLine = br.readLine()) != null){
-				String[] customerInfo = newLine.split(",");
+		    while ((nextLine = reader.readNext()) != null) {
+		    	String[] customerInfo = nextLine;
 				ArrayList<String> attributes =  new ArrayList<String>();
 				
 				if(customerInfo.length != header.size()){
+					System.out.println("one data has been deleted");
 					continue;
 				}
 				
@@ -154,9 +235,9 @@ public class DecisionTreeDriver {
 				Customer newCustomer = new Customer(attributes);
 
 				dataDB.addCustomer(newCustomer);
-			}
+		    }
 			
-			br.close();
+			reader.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -177,13 +258,13 @@ public class DecisionTreeDriver {
 			//discretize continuous variables
 			if(feature.getIsContinuous()){
 				ArrayList<String> values = bankDB.getAttList(feature.getName());
-				ArrayList<Integer> valueList = new ArrayList<Integer>();
+				ArrayList<Double> valueList = new ArrayList<Double>();
 
-				int maxValue = 0;
-				int minValue = Integer.parseInt(values.get(0));
-				int v;
+				double maxValue = 0;
+				double minValue = Double.parseDouble(values.get(0));
+				double v;
 				for(String value:values){
-					v = Integer.parseInt(value);
+					v = Double.parseDouble(value);
 					if(v > maxValue){
 						maxValue = v;
 					}else if(v < minValue){
@@ -230,20 +311,15 @@ public class DecisionTreeDriver {
 		
 		//for feature set
 		for(Map.Entry<String, Boolean> entry:isContinuous.entrySet()){
-			Feature newFeature = new Feature(id);
+			Feature newFeature = new Feature();
 			newFeature.setFeatureName(entry.getKey());
 			newFeature.setTarget(false);
 			newFeature.setFeatureType(entry.getValue());
 			features.add(newFeature);
-			id++;
+			if(targetAttr.equals(newFeature.getName())){
+				newFeature.setTarget(true);
+			}
 		}
-		
-		//for the target feature
-		Feature newFeature = new Feature(id);
-		newFeature.setFeatureName(targetAttr);
-		newFeature.setTarget(true);
-		newFeature.setFeatureType(false);
-		features.add(newFeature);
 		
 		return features;
 	}
@@ -254,7 +330,7 @@ public class DecisionTreeDriver {
 		if(trainingFile.length() != 0 && testFile.length() != 0 && targetAttr.length() != 0 && !isContinous.isEmpty()){
 			trainingData = trainingFile;
 			testingData = testFile;
-			OutFilePath = "output.txt";//TODO for output interface
+			OutFilePath = "output.txt";
 			target = targetAttr;
 
 			System.out.println("Parameter Setting: -i "+trainingData

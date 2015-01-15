@@ -27,13 +27,31 @@ public class CustomerDB {
 	}
 	
 	public void printDB(){
-
+		for(String attr:Header){
+			System.out.print(attr+" ");
+		}
+		System.out.println();
+		
 		for(Customer c:DB){
 			System.out.println(c.toString());
 		}
 	}
+	
+	public String toString(){
+		StringBuilder sb = new StringBuilder();
+		for(String attr:Header){
+			sb.append(attr+" ");
+		}
+		sb.append("\n");
+		
+		for(Customer c:DB){
+			sb.append(c.toString()+"\n");
+		}
+		
+		return sb.toString();
+	}
 
-	public void discretizeValues(int maxValue, int minValue, int range,
+	public void discretizeValues(double maxValue, double minValue, double range,
 			String featureName) {
 		int attrId = Header.indexOf(featureName);
 		for(Customer customer:DB){		
@@ -116,6 +134,10 @@ public class CustomerDB {
 
 	public int getColNumOfFeature(String featureName) {
 		return Header.indexOf(featureName);
+	}
+
+	public ArrayList<String> getHeader() {
+		return this.Header;
 	}
 
 

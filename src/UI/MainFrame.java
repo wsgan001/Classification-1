@@ -1,43 +1,42 @@
 package UI;
 
 import java.awt.EventQueue;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-import javax.swing.DefaultListModel;
-import javax.swing.JFileChooser;
-import javax.swing.JMenuBar;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-
-import javax.swing.JList;
-import javax.swing.JScrollPane;
-import javax.swing.JButton;
-
 import java.awt.Font;
-import java.io.BufferedReader;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JLabel;
-import javax.swing.SwingConstants;
-import javax.swing.JTextField;
-import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
+import com.opencsv.CSVReader;
 
 
 public class MainFrame extends JFrame {
 
 	private JPanel contentPane;
-	private DefaultListModel leftListModel;
-	private DefaultListModel rightListModel;
+	private DefaultListModel leftListModel = new DefaultListModel();
+	private DefaultListModel rightListModel = new DefaultListModel();
+	private JList leftList = new JList(leftListModel);
+	private JList rightList = new JList(rightListModel);
 	private JFileChooser importChooser = new JFileChooser(new File("."));
 	private JTextField TrainingFileTextField;
 	private JTextField TestingFileTextField;
@@ -99,34 +98,50 @@ public class MainFrame extends JFrame {
 		leftListScrollPane.setBounds(50, 55, 200, 250);
 		contentPane.add(leftListScrollPane);
 		
-		leftListModel = new DefaultListModel();
-		JList leftList = new JList(leftListModel);
 		leftListScrollPane.setViewportView(leftList);
 		
 		JScrollPane rightListScrollPane = new JScrollPane();
 		rightListScrollPane.setBounds(350, 55, 200, 250);
 		contentPane.add(rightListScrollPane);
 		
-		rightListModel = new DefaultListModel();
-		JList rightList = new JList(rightListModel);
 		rightListScrollPane.setViewportView(rightList);
 		
 		JButton moveAllButton = new JButton(">>");
+		moveAllButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				moveAllItem();
+			}
+		});
 		moveAllButton.setFont(new Font("新細明體", Font.BOLD, 12));
 		moveAllButton.setBounds(275, 59, 50, 50);
 		contentPane.add(moveAllButton);
 		
 		JButton moveOneButton = new JButton(">");
+		moveOneButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				moveOneItem();
+			}
+		});
 		moveOneButton.setFont(new Font("新細明體", Font.BOLD, 12));
 		moveOneButton.setBounds(275, 127, 50, 50);
 		contentPane.add(moveOneButton);
 		
 		JButton removeOneButton = new JButton("<");
+		removeOneButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				removeOneItem();
+			}
+		});
 		removeOneButton.setFont(new Font("新細明體", Font.BOLD, 12));
 		removeOneButton.setBounds(275, 195, 50, 50);
 		contentPane.add(removeOneButton);
 		
 		JButton removeAllButton = new JButton("<<");
+		removeAllButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				removeAllItem();
+			}
+		});
 		removeAllButton.setFont(new Font("新細明體", Font.BOLD, 12));
 		removeAllButton.setBounds(275, 255, 50, 50);
 		contentPane.add(removeAllButton);
@@ -137,9 +152,13 @@ public class MainFrame extends JFrame {
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {
 						try {
-							selectedAttribute = allAttribute; 
+							while(!leftListModel.isEmpty()){
+								selectedAttribute.add((String)leftListModel.get(0));
+								leftListModel.remove(0);
+							}
 							ChooseConFrame frame = new ChooseConFrame(TrainingFileTextField.getText(), TestingFileTextField.getText(), selectedAttribute);
 							frame.setVisible(true);
+							setVisible(false);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -223,17 +242,15 @@ public class MainFrame extends JFrame {
 				allAttribute.clear();
 				leftListModel.clear();
 				
-				BufferedReader br;
-				String line = "";
-				String[] tokens;
 				try {
-					br = new java.io.BufferedReader(new java.io.FileReader(path));
-					
-					line = br.readLine();
-					tokens = line.split("\t");
-					for(int i=0;i<tokens.length;i++){
-						allAttribute.add(tokens[i]);
-						leftListModel.addElement(tokens[i]);
+					CSVReader reader = new CSVReader(new FileReader(path));
+					String [] nextLine;
+					nextLine = reader.readNext();
+
+
+					for(int i=0;i<nextLine.length;i++){
+						allAttribute.add(nextLine[i].trim());
+						leftListModel.addElement(nextLine[i].trim());
 					}
 
 				} catch (Exception e) {
@@ -266,6 +283,40 @@ public class MainFrame extends JFrame {
 
 
 		
+	}
+	
+	private void moveOneItem(){
+		if(leftListModel.isEmpty()){
+			return;
+		}
+		int selectedIndex = leftList.getSelectedIndex();
+		String selectedItem = (String)leftList.getSelectedValue();
+		leftListModel.remove(selectedIndex);
+		rightListModel.addElement(selectedItem);
+	}
+	
+	private void removeOneItem(){
+		if(rightListModel.isEmpty()){
+			return;
+		}
+		int selectedIndex = rightList.getSelectedIndex();
+		String selectedItem = (String)rightList.getSelectedValue();
+		rightListModel.remove(selectedIndex);
+		leftListModel.addElement(selectedItem);
+	}
+	
+	private void moveAllItem(){
+		while(!leftListModel.isEmpty()){
+		rightListModel.addElement(leftListModel.get(0));
+		leftListModel.remove(0);
+		}
+	}
+	
+	private void removeAllItem(){
+		while(!rightListModel.isEmpty()){
+			leftListModel.addElement(rightListModel.get(0));
+			rightListModel.remove(0);
+			}
 	}
 }
 

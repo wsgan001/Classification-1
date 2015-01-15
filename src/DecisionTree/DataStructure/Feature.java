@@ -4,21 +4,17 @@ public class Feature {
 	private String name;
 	private boolean discriminated;
 	private boolean target;
-	private int featureId;
 	private boolean isContinuous;
 	private int numValues;
-	private int maxValue;
-	private int minValue;
-	private int range; //discretize continuous value
+	private double maxValue;
+	private double minValue;
+	private double range; //discretize continuous value
 	
 	public Feature(){
+		target = false;
 		maxValue = 0;
 		minValue = 0;
 		range = 0;
-	}
-
-	public Feature(int id) {
-		featureId = id;
 	}
 
 	public void setFeatureName(String featureName) {
@@ -42,24 +38,24 @@ public class Feature {
 		
 	}
 
-	public void setRange(int range) {
+	public void setRange(double range) {
 		this.range = range;
 	}
 
-	public void setMaxValue(int maxValue) {
+	public void setMaxValue(double maxValue) {
 		this.maxValue = maxValue;
 	}
 
-	public void setMinValue(int minValue) {
+	public void setMinValue(double minValue) {
 		this.minValue = minValue;
 	}
 	
 	public String toString(){
-		return 	"Name("+name+") ID("+featureId+") Type("+isContinuous+") numValues("+numValues+") max("+maxValue+") min("+minValue+")"
+		return 	"Name("+name+") Type("+isContinuous+") numValues("+numValues+") max("+maxValue+") min("+minValue+")"
 			  + " discriminated("+discriminated+") ";
 	}
 
-	public int getRange() {
+	public double getRange() {
 		return range;
 	}
 
@@ -69,10 +65,6 @@ public class Feature {
 
 	public void setDiscriminated(boolean discriminated) {
 		this.discriminated = discriminated;
-	}
-
-	public int getFeatureId() {
-		return featureId;
 	}
 
 	public boolean isTarget() {

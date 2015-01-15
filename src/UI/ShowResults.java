@@ -56,7 +56,7 @@ public class ShowResults extends JFrame {
 	public ShowResults(String info) {
 		setTitle("DMFinal");
 		setResizable(false);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 610, 560);
 	
 	/*最上層File 選單*/	
@@ -101,7 +101,7 @@ public class ShowResults extends JFrame {
 		
 		JTextArea txtrTotalTime = new JTextArea();
 		scrollPane.setViewportView(txtrTotalTime);
-		txtrTotalTime.setText("Test file path : C:\\\\test.txt\r\n\r\n----------------------------\r\nTotal time : 100000ms\r\nRecall : 101%\r\nPrecision : 101%\r\nAccuracy : 101%\r\nTP rate : 101%\r\nFP rate : 101%");
+		txtrTotalTime.setText(info);
 		
 		JLabel leftLabel = new JLabel("Decision Tree");
 		leftLabel.setFont(new Font("微軟正黑體", Font.BOLD, 14));
